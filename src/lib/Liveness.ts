@@ -1,43 +1,43 @@
-import { Logger } from "pino"
+import { Logger } from "pino";
+import { makePoller, type Poller } from "reactive-poller";
 
 export class Liveness {
-  private i?: NodeJS.Timeout
-  private backoffTimeout = 60 * 1000 /* 1 min */
+  private backoffTimeout = 60 * 1000; /* 1 min */
+  private poller: Poller<void>;
 
   constructor(
     private clientId: string,
     private intervalMs: number,
     private titorelliServiceUrl: string,
-    private logger: Logger
-  ) { }
-
-  public startReporting = () => {
-    this.i = setInterval(this.report, this.intervalMs)
+    private logger: Logger,
+  ) {
+    this.poller = makePoller({
+      dataProvider: this.report,
+      interval: this.intervalMs,
+      retryInterval: this.backoffTimeout,
+      errorHandler: (e) => logger.error(e),
+    });
   }
 
-  public stopReporting = () => {
-    clearInterval(this.i)
+  public startReporting = async () => {
+    await this.poller.start();
+  };
 
-    delete this.i
-  }
+  public stopReporting = async () => {
+    await this.poller.stop();
+  };
 
   private report = async () => {
-    const restartReporting = () => {
-      this.stopReporting()
+    const resp = await fetch(
+      `${this.titorelliServiceUrl}/bots/liveness?clientId=${this.clientId}`,
+      { method: "POST" },
+    );
 
-      setTimeout(this.startReporting, this.backoffTimeout)
+    if (!resp.ok) {
+      this.logger.error(
+        'Liveness endpoint for bot with client id = "%s" not responding',
+        this.clientId,
+      );
     }
-
-    try {
-      const resp = await fetch(`${this.titorelliServiceUrl}/bots/liveness?clientId=${this.clientId}`, { method: 'POST' })
-
-      if (!resp.ok) {
-        restartReporting()
-      }
-    } catch (e) {
-      this.logger.error(e)
-
-      restartReporting()
-    }
-  }
+  };
 }
