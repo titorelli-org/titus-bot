@@ -49,6 +49,8 @@ export class Bot {
     this.installExitHandlers();
     this.installBotHandlers();
 
+    this.bot.catch((error) => this.logger.error(error));
+
     return this.bot.start({
       allowed_updates: [
         "message",
@@ -75,6 +77,9 @@ export class Bot {
         "chat_boost",
         "removed_chat_boost",
       ],
+      onStart: () => {
+        this.logger.info("Bot started");
+      },
     });
   }
 
