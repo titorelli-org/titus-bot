@@ -17,6 +17,6 @@ const liveness = new Liveness(
 
 liveness.startReporting();
 
-// bot.launch()
-//   .catch(() => process.exit(1))
-//   .then(() => process.exit(0))
+bot.launch()
+  .catch(() => process.exit(1))
+  .then(() => process.exit(0))
