@@ -1,5 +1,8 @@
 import { env, logger, Bot, Liveness } from "./lib";
 
+logger.info("Hello, world!");
+console.log("Hello, world! 2");
+
 const bot = new Bot({
   clientId: env.TITORELLI_CLIENT_ID,
   accessToken: env.TITORELLI_ACCESS_TOKEN,
@@ -17,6 +20,7 @@ const liveness = new Liveness(
 
 liveness.startReporting();
 
-bot.launch()
+bot
+  .launch()
   .catch(() => process.exit(1))
-  .then(() => process.exit(0))
+  .then(() => process.exit(0));
