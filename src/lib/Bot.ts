@@ -25,7 +25,7 @@ export class Bot {
     this.bot = new GrammyBot(botToken);
 
     this.telemetry = new TelemetryClient({
-      serviceUrl: env.CAS_ORIGIN,
+      serviceUrl: env.TELEMETRY_ORIGIN,
     });
     this.titorelli = new TitorelliClient({
       serviceUrl: env.TITORELLI_HOST,
