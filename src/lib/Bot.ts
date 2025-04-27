@@ -2,6 +2,7 @@ import { type Logger } from "pino";
 import { Bot as GrammyBot, type Context } from "grammy";
 import { TitorelliClient } from "@titorelli/client";
 import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
+import { env } from "./env";
 
 export class Bot {
   private logger: Logger;
@@ -14,25 +15,21 @@ export class Bot {
     accessToken,
     botToken,
     logger,
-    titorelliServiceUrl,
-    casUrl,
   }: {
     clientId: string;
     accessToken: string;
     botToken: string;
     logger: Logger;
-    titorelliServiceUrl: string;
-    casUrl: string;
   }) {
     this.logger = logger;
     this.bot = new GrammyBot(botToken);
 
     this.telemetry = new TelemetryClient({
-      serviceUrl: titorelliServiceUrl,
+      serviceUrl: env.CAS_ORIGIN,
     });
     this.titorelli = new TitorelliClient({
-      serviceUrl: titorelliServiceUrl,
-      casUrl,
+      serviceUrl: env.TITORELLI_HOST,
+      casUrl: env.CAS_ORIGIN,
       clientId: clientId,
       clientSecret: accessToken,
       modelId: "generic",
