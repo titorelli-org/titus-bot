@@ -1,13 +1,11 @@
 import { env, logger, Bot, Liveness } from "./lib";
 
-logger.info("Hello, world!");
-console.log("Hello, world! 2");
-
 const bot = new Bot({
   clientId: env.TITORELLI_CLIENT_ID,
   accessToken: env.TITORELLI_ACCESS_TOKEN,
   botToken: env.BOT_TOKEN,
   titorelliServiceUrl: env.TITORELLI_HOST,
+  casUrl: env.CAS_URL,
   logger: logger.child({ module: "bot" }),
 });
 

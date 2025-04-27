@@ -2,7 +2,6 @@ import { type Logger } from "pino";
 import { Bot as GrammyBot, type Context } from "grammy";
 import { TitorelliClient } from "@titorelli/client";
 import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
-import { Update } from "telegraf/typings/core/types/typegram";
 
 export class Bot {
   private logger: Logger;
@@ -16,12 +15,14 @@ export class Bot {
     botToken,
     logger,
     titorelliServiceUrl,
+    casUrl,
   }: {
     clientId: string;
     accessToken: string;
     botToken: string;
     logger: Logger;
     titorelliServiceUrl: string;
+    casUrl: string;
   }) {
     this.logger = logger;
     this.bot = new GrammyBot(botToken);
@@ -31,6 +32,7 @@ export class Bot {
     });
     this.titorelli = new TitorelliClient({
       serviceUrl: titorelliServiceUrl,
+      casUrl,
       clientId: clientId,
       clientSecret: accessToken,
       modelId: "generic",
@@ -111,7 +113,7 @@ export class Bot {
         return next();
       }
 
-      const { value: label, reason } = await this.titorelli.predict({
+      const { label, reason } = await this.titorelli.predict({
         text,
         tgUserId: ctx.message.from.id,
       });
@@ -120,33 +122,54 @@ export class Bot {
 
       switch (reason) {
         case "totem":
-          return next();
-        case "cas":
-          await this.tryDeleteMessage(ctx);
-          await this.tryBanChatMember(ctx);
+          this.logger.info("User passed because has totem");
 
           return next();
+        case "cas":
+          if (label === "spam") {
+            await this.tryDeleteMessage(ctx);
+            await this.tryBanChatMember(ctx);
+
+            this.logger.info("User banned because of CAS");
+
+            return next();
+          } else if (label === "ham") {
+            this.logger.info("User passed CAS check");
+          }
         case "duplicate":
           if (label === "spam") {
             await this.tryDeleteMessage(ctx);
-            await this.titorelli.cas.train({ tgUserId: ctx.message.from.id });
-          }
 
-          return next();
+            this.logger.info("User failed duplicate check, message deleted");
+
+            return next();
+          } else {
+            await this.titorelli.cas.protect(ctx.message.from.id);
+
+            this.logger.info("User passed duplicate check, totem granted");
+
+            return next();
+          }
         case "classifier":
           switch (label) {
             case "spam":
               await this.tryDeleteMessage(ctx);
 
+              this.logger.info("User failed classifier check, message deleted");
+
               return next();
             case "ham":
-              await this.titorelli.totems.train({
-                tgUserId: ctx.message.from.id,
-              });
+              await this.titorelli.cas.protect(ctx.message.from.id);
+
+              this.logger.info(
+                "User passed classifier check, message preserved",
+              );
 
               return next();
           }
       }
+
+      return next();
     });
 
     this.bot.on("message", async (ctx, next) => {});
@@ -159,12 +182,12 @@ export class Bot {
       if (newChatMember.status === "member") {
         const { id: tgUserId } = newChatMember.user;
 
-        const { banned } = await this.titorelli.cas.predictCas({
-          tgUserId,
-        });
+        const { banned } = await this.titorelli.cas.isBanned(tgUserId);
 
         if (banned) {
           await this.tryBanChatMember(ctx);
+
+          this.logger.info("User failed CAS check on entrerance, banned");
         }
       }
 
