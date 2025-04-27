@@ -99,6 +99,8 @@ export class Bot {
 
   private installMessageHandler() {
     this.bot.on("message", async (ctx, next) => {
+      this.logger.info(ctx, "Incoming message");
+
       const text = ctx.message.text ?? ctx.message.caption;
 
       if (!text) {
