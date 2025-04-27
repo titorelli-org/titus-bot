@@ -99,8 +99,6 @@ export class Bot {
 
   private installMessageHandler() {
     this.bot.on("message", async (ctx, next) => {
-      this.logger.info(ctx, "Incoming message");
-
       const text = ctx.message.text ?? ctx.message.caption;
 
       if (!text) {
@@ -112,10 +110,29 @@ export class Bot {
         return next();
       }
 
+      const { banned, reason: casReason } = await this.titorelli.cas.isBanned(
+        ctx.message.from.id,
+      );
+
+      if (banned) {
+        await this.tryDeleteMessage(ctx);
+        await this.tryBanChatMember(ctx);
+
+        this.logger.info("User banned because failed CAS check");
+
+        return next();
+      } else if (casReason === "totem") {
+        this.logger.info("User passed because has totem");
+
+        return next();
+      }
+
       const { label, reason } = await this.titorelli.predict({
         text,
         tgUserId: ctx.message.from.id,
       });
+
+      this.logger.info({ label, reason }, "Classification result:");
 
       await this.titorelli.duplicate.train({ text, label });
 
@@ -142,7 +159,7 @@ export class Bot {
             this.logger.info("User failed duplicate check, message deleted");
 
             return next();
-          } else {
+          } else if (label === "ham") {
             await this.titorelli.cas.protect(ctx.message.from.id);
 
             this.logger.info("User passed duplicate check, totem granted");

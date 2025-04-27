@@ -1,8 +1,9 @@
 {
   "name": "titus-bot",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "dist/bundle.js",
   "scripts": {
+    "dev": "npm run bundle && node -r dotenv/config dist/index.js | pino-pretty",
     "bundle": "ncc build src/index.ts -C -d -t -o dist"
   },
   "keywords": [],
@@ -15,8 +16,9 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
-    "@titorelli/client": "^3.0.0",
+    "@titorelli/client": "^3.2.0",
     "@titorelli/telemetry-client": "^9.1.1",
+    "dotenv": "^16.5.0",
     "envalid": "^8.0.0",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
