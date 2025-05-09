@@ -3,6 +3,27 @@ import { Bot as GrammyBot, type Context } from "grammy";
 import { TitorelliClient } from "@titorelli/client";
 import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
 import { env } from "./env";
+import { OutgoingMessageTemplate } from "./OutgoingMessageTemplate";
+
+const helloPrivateMessage = new OutgoingMessageTemplate<{
+  siteUrl: "https://next.titorelli.ru";
+}>(`
+  Добро пожаловать!
+
+  Это бот Титус.
+
+  Он помогает в борьбе против спама в сообествах Telegram.
+
+  Сейчас никаких функций в приватных чатах (таких, как этот) нет, но скоро появятся )
+
+  Если у вас есть группа или канал, можете добавить туда этого бота и назначить его администратором.
+
+  Так же, нужно будет добавить боту права на удаление сообщений.
+
+  Пока на этом все.
+
+  Узнать больше можно тут: {{siteUrl}}
+`);
 
 export class Bot {
   private logger: Logger;
@@ -89,12 +110,26 @@ export class Bot {
 
   private installBotHandlers() {
     this.installTelemetry();
+    this.installStartHandler();
     this.installMessageHandler();
     this.installChatMemberHandler();
   }
 
   private installTelemetry() {
     this.bot.use(grammyMiddleware(this.telemetry));
+  }
+
+  private installStartHandler() {
+    this.bot.command("start", async (ctx, next) => {
+      if (ctx.message?.chat.type !== "private") return next();
+
+      await ctx.api.sendMessage(
+        ctx.chat.id,
+        helloPrivateMessage.render({
+          siteUrl: "https://next.titorelli.ru",
+        }),
+      );
+    });
   }
 
   private installMessageHandler() {
