@@ -7,6 +7,9 @@ export class OutgoingMessageTemplate<Params extends Record<string, unknown>> {
       .split(/\n+/)
       .join("\n")
       .split(/ +/)
+      .join(" ")
+      .split(" ")
+      .map((l) => l.trim())
       .join(" ");
 
     for (const [name, value] of Object.entries(params)) {
