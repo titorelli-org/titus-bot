@@ -1,12 +1,17 @@
 import { type Logger } from "pino";
 import { Bot as GrammyBot, type Context } from "grammy";
-import { TitorelliClient } from "@titorelli/client";
+import {
+  CasClient,
+  createClient,
+  ModelClient,
+  serviceDiscovery,
+} from "@titorelli/client";
 import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
 import { env } from "./env";
 import { OutgoingMessageTemplate } from "./OutgoingMessageTemplate";
 
 const helloPrivateMessage = new OutgoingMessageTemplate<{
-  siteUrl: "https://next.titorelli.ru";
+  siteUrl: string;
 }>(`
   Добро пожаловать!
 
@@ -28,7 +33,6 @@ const helloPrivateMessage = new OutgoingMessageTemplate<{
 export class Bot {
   private logger: Logger;
   private bot: GrammyBot;
-  private titorelli: TitorelliClient;
   private telemetry: TelemetryClient;
 
   constructor({
@@ -47,21 +51,6 @@ export class Bot {
 
     this.telemetry = new TelemetryClient({
       serviceUrl: env.TELEMETRY_ORIGIN,
-    });
-    this.titorelli = new TitorelliClient({
-      serviceUrl: env.TITORELLI_HOST,
-      casUrl: env.CAS_ORIGIN,
-      clientId: clientId,
-      clientSecret: accessToken,
-      modelId: "generic",
-      scope: [
-        "predict",
-        "train",
-        "exact_match/train",
-        "totems/train",
-        "cas/predict",
-        "cas/train",
-      ],
     });
   }
 
@@ -145,7 +134,9 @@ export class Bot {
         return next();
       }
 
-      const { banned, reason: casReason } = await this.titorelli.cas.isBanned(
+      const cas = await this.getCasClient();
+
+      const { banned, reason: casReason } = await cas.isBanned(
         ctx.message.from.id,
       );
 
@@ -162,14 +153,11 @@ export class Bot {
         return next();
       }
 
-      const { label, reason } = await this.titorelli.predict({
-        text,
-        tgUserId: ctx.message.from.id,
-      });
+      const model = await this.getModelClient();
+
+      const { label, reason } = await model.predict({ text });
 
       this.logger.info({ label, reason }, "Classification result:");
-
-      await this.titorelli.duplicate.train({ text, label });
 
       switch (reason) {
         case "totem":
@@ -195,7 +183,7 @@ export class Bot {
 
             return next();
           } else if (label === "ham") {
-            await this.titorelli.cas.protect(ctx.message.from.id);
+            await cas.protect(ctx.message.from.id);
 
             this.logger.info("User passed duplicate check, totem granted");
 
@@ -210,7 +198,7 @@ export class Bot {
 
               return next();
             case "ham":
-              await this.titorelli.cas.protect(ctx.message.from.id);
+              await cas.protect(ctx.message.from.id);
 
               this.logger.info(
                 "User passed classifier check, message preserved",
@@ -233,7 +221,9 @@ export class Bot {
       if (newChatMember.status === "member") {
         const { id: tgUserId } = newChatMember.user;
 
-        const { banned } = await this.titorelli.cas.isBanned(tgUserId);
+        const cas = await this.getCasClient();
+
+        const { banned } = await cas.isBanned(tgUserId);
 
         if (banned) {
           await this.tryBanChatMember(ctx);
@@ -260,5 +250,39 @@ export class Bot {
     } catch (e) {
       this.logger.error(e, "Error when ban chat member");
     }
+  }
+
+  private _modelClient: ModelClient | null = null;
+  private async getModelClient() {
+    if (this._modelClient) return this._modelClient;
+
+    const { modelOrigin } = await serviceDiscovery("next.titorelli.ru");
+
+    const model = await createClient(
+      "model",
+      modelOrigin,
+      `titus-${env.TITORELLI_CLIENT_ID}`,
+    );
+
+    this._modelClient = model;
+
+    return model;
+  }
+
+  private _casClient: CasClient | null = null;
+  private async getCasClient() {
+    if (this._casClient) return this._casClient;
+
+    const { casOrigin } = await serviceDiscovery("next.titorelli.ru");
+
+    const cas = await createClient(
+      "cas",
+      casOrigin,
+      `titus-${env.TITORELLI_CLIENT_ID}`,
+    );
+
+    this._casClient = cas;
+
+    return cas;
   }
 }
