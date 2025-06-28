@@ -41,7 +41,7 @@ RUN adduser --system --uid 1001 nextjs
 # RUN npm install pino
 
 # COPY --from=packer /usr/src/titus-bot/node_modules node_modules
-COPY --from=packer /usr/src/titus-bot/dist/index.js .
+COPY --from=packer --chown=nextjs:nodejs /usr/src/titus-bot/dist/index.js .
 
 # Run the application as a non-root user.
 USER nextjs
