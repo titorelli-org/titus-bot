@@ -32,19 +32,19 @@ FROM node:${NODE_VERSION}-alpine
 
 ENV NODE_ENV=production
 
-# DEBUG ONLY
-WORKDIR /usr/run/titus-bot
-
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# Run the application as a non-root user.
+USER nextjs
+
+# DEBUG ONLY
+WORKDIR /usr/run/titus-bot
 
 # RUN npm install pino
 
 # COPY --from=packer /usr/src/titus-bot/node_modules node_modules
 COPY --from=packer --chown=nextjs:nodejs /usr/src/titus-bot/dist/index.js .
-
-# Run the application as a non-root user.
-USER nextjs
 
 # Run the application.
 CMD [ "node", "index.js" ]
