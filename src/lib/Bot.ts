@@ -5,6 +5,7 @@ import {
   createClient,
   ModelClient,
   serviceDiscovery,
+  clientsStore,
 } from "@titorelli/client";
 import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
 import { env } from "./env";
@@ -34,6 +35,7 @@ export class Bot {
   private logger: Logger;
   private bot: GrammyBot;
   private telemetry: TelemetryClient;
+  private readonly clientName = `titus-${env.TITORELLI_CLIENT_ID}`;
 
   constructor({
     clientId,
@@ -51,6 +53,8 @@ export class Bot {
 
     this.telemetry = new TelemetryClient({
       serviceUrl: env.TELEMETRY_ORIGIN,
+      clientName: this.clientName,
+      clientStore: clientsStore,
     });
   }
 
@@ -258,11 +262,7 @@ export class Bot {
 
     const { modelOrigin } = await serviceDiscovery("next.titorelli.ru");
 
-    const model = await createClient(
-      "model",
-      modelOrigin,
-      `titus-${env.TITORELLI_CLIENT_ID}`,
-    );
+    const model = await createClient("model", modelOrigin, this.clientName);
 
     this._modelClient = model;
 
@@ -275,11 +275,7 @@ export class Bot {
 
     const { casOrigin } = await serviceDiscovery("next.titorelli.ru");
 
-    const cas = await createClient(
-      "cas",
-      casOrigin,
-      `titus-${env.TITORELLI_CLIENT_ID}`,
-    );
+    const cas = await createClient("cas", casOrigin, this.clientName);
 
     this._casClient = cas;
 
