@@ -35,13 +35,16 @@ ENV NODE_ENV=production
 # DEBUG ONLY
 WORKDIR /usr/run/titus-bot
 
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
 # RUN npm install pino
 
 # COPY --from=packer /usr/src/titus-bot/node_modules node_modules
 COPY --from=packer /usr/src/titus-bot/dist/index.js .
 
 # Run the application as a non-root user.
-USER node
+USER nextjs
 
 # Run the application.
 CMD [ "node", "index.js" ]
