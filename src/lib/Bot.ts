@@ -54,6 +54,7 @@ export class Bot {
     this.telemetry = new TelemetryClient({
       serviceUrl: env.TELEMETRY_ORIGIN,
       clientName: this.clientName,
+      initialAccessToken: env.INITIAL_ACCESS_TOKEN,
       clientStore: clientsStore,
     });
   }
