@@ -7,4 +7,5 @@ export const env = cleanEnv(process.env, {
   TELEMETRY_ORIGIN: url(),
   TITORELLI_CLIENT_ID: str(),
   TITORELLI_ACCESS_TOKEN: str(),
+  INITIAL_ACCESS_TOKEN: str(),
 });

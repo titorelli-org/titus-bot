@@ -262,7 +262,14 @@ export class Bot {
 
     const { modelOrigin } = await serviceDiscovery("next.titorelli.ru");
 
-    const model = await createClient("model", modelOrigin, this.clientName);
+    const model = await createClient("model", {
+      baseUrl: modelOrigin,
+      auth: {
+        clientName: this.clientName,
+        initialAccessToken: env.INITIAL_ACCESS_TOKEN,
+      },
+      logger: this.logger,
+    });
 
     this._modelClient = model;
 
@@ -275,7 +282,14 @@ export class Bot {
 
     const { casOrigin } = await serviceDiscovery("next.titorelli.ru");
 
-    const cas = await createClient("cas", casOrigin, this.clientName);
+    const cas = await createClient("cas", {
+      baseUrl: casOrigin,
+      auth: {
+        clientName: this.clientName,
+        initialAccessToken: env.INITIAL_ACCESS_TOKEN,
+      },
+      logger: this.logger,
+    });
 
     this._casClient = cas;
 
