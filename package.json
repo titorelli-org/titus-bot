@@ -17,8 +17,8 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@titorelli/client": "^5.0.1",
-    "@titorelli/telemetry-client": "^10.1.0",
+    "@titorelli/client": "^5.0.2",
+    "@titorelli/telemetry-client": "^10.1.1",
     "dotenv": "^17.2.2",
     "envalid": "^8.1.0",
     "pino": "^9.11.0",
