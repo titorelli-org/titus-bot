@@ -5,6 +5,7 @@
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
 ARG NODE_VERSION=22.19.0
+ARG GITHUB_TOKEN
 
 FROM node:${NODE_VERSION}-alpine AS packer
 
@@ -24,7 +25,7 @@ RUN --mount=type=bind,source=package.json,target=package.json \
 # Copy the rest of the source files into the image.
 COPY . .
 
-RUN npm install --also dev
+RUN npm install --include dev
 
 RUN npm run bundle
 
@@ -44,7 +45,7 @@ WORKDIR /usr/run/titus-bot
 # RUN npm install pino
 
 # COPY --from=packer /usr/src/titus-bot/node_modules node_modules
-COPY --from=packer --chown=nextjs:nodejs /usr/src/titus-bot/dist/index.js .
+COPY --from=packer --chown=nextjs:nodejs /usr/src/titus-bot/dist/ .
 
 # Run the application.
 CMD [ "node", "index.js" ]
