@@ -1,9 +1,9 @@
 import { createClient, serviceDiscovery } from "@titorelli/client";
-import { test, it } from "node:test";
+import { it, assert, describe } from "node:test";
 import { env } from "../src/lib/env";
 
-test("cas-request", async () => {
-  await it("should not fail", async () => {
+describe("cas-request", async () => {
+  await it("should not fail", async ({ assert }) => {
     const { casOrigin } = await serviceDiscovery("http://next.titorelli.ru");
     const casClient = await createClient("cas", {
       baseUrl: casOrigin,
@@ -13,8 +13,19 @@ test("cas-request", async () => {
       },
     });
 
-    const result = await casClient.isBanned(1234);
+    const [result1, result2] = await Promise.all([
+      casClient.isBanned(1234),
+      casClient.isBanned(4321),
+    ]);
 
-    console.log(result);
+    assert.deepEqual(result1, {
+      banned: false,
+      reason: "chain",
+    });
+
+    assert.deepEqual(result2, {
+      banned: false,
+      reason: "chain",
+    });
   });
 });
