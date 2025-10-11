@@ -285,10 +285,9 @@ export class Bot {
 
     const cas = await createClient("cas", {
       baseUrl: casOrigin,
-      auth: {
-        clientName: this.clientName,
-        initialAccessToken: env.INITIAL_ACCESS_TOKEN,
-      },
+      auth: Object.assign{
+        
+      }, {accessToken: env.TITORELLI_ACCESS_TOKEN}),
       logger: this.logger,
     });
 
