@@ -266,8 +266,7 @@ export class Bot {
     const model = await createClient("model", {
       baseUrl: modelOrigin,
       auth: {
-        clientName: this.clientName,
-        initialAccessToken: env.INITIAL_ACCESS_TOKEN,
+        accessToken: env.TITORELLI_ACCESS_TOKEN,
       },
       logger: this.logger,
     });
@@ -285,9 +284,9 @@ export class Bot {
 
     const cas = await createClient("cas", {
       baseUrl: casOrigin,
-      auth: Object.assign{
-        
-      }, {accessToken: env.TITORELLI_ACCESS_TOKEN}),
+      auth: {
+        accessToken: env.TITORELLI_ACCESS_TOKEN,
+      },
       logger: this.logger,
     });
 
