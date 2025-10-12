@@ -8,8 +8,7 @@ describe("cas-request", async () => {
     const casClient = await createClient("cas", {
       baseUrl: casOrigin,
       auth: {
-        clientName: "--test-2--",
-        initialAccessToken: env.INITIAL_ACCESS_TOKEN,
+        accessToken: env.TITORELLI_ACCESS_TOKEN,
       },
     });
 

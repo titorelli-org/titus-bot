@@ -10,6 +10,9 @@ import {
 import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
 import { env } from "./env";
 import { OutgoingMessageTemplate } from "./OutgoingMessageTemplate";
+import { type Socket } from "socket.io-client";
+import { createRunner } from "./createRunner";
+import { resolve } from "path";
 
 const helloPrivateMessage = new OutgoingMessageTemplate<{
   siteUrl: string;
@@ -35,22 +38,37 @@ export class Bot {
   private logger: Logger;
   private bot: GrammyBot;
   private telemetry: TelemetryClient;
+  private socket: Socket | null;
   private readonly clientName = `titus-${env.TITORELLI_CLIENT_ID}`;
 
   constructor({
     clientId,
     accessToken,
     botToken,
+    socket,
     logger,
   }: {
     clientId: string;
     accessToken: string;
     botToken: string;
+    socket?: Socket | null;
     logger: Logger;
   }) {
     this.logger = logger;
-    this.bot = new GrammyBot(botToken);
-
+    this.bot = new GrammyBot(botToken, {
+      botInfo: {
+        id: 7182412043,
+        is_bot: true,
+        first_name: "titus_bot",
+        username: "titus_antispam_bot",
+        can_join_groups: true,
+        can_read_all_group_messages: true,
+        supports_inline_queries: false,
+        can_connect_to_business: false,
+        has_main_web_app: false,
+      },
+    });
+    this.socket = socket ?? null;
     this.telemetry = new TelemetryClient({
       serviceUrl: env.TELEMETRY_ORIGIN,
       clientName: this.clientName,
@@ -65,48 +83,67 @@ export class Bot {
 
     this.bot.catch((error) => this.logger.error(error));
 
-    return this.bot.start({
-      allowed_updates: [
-        "message",
-        "edited_message",
-        "channel_post",
-        "edited_channel_post",
-        // 'business_connection',
-        // 'business_message',
-        // 'edited_business_message',
-        // 'deleted_business_messages',
-        "message_reaction",
-        "message_reaction_count",
-        "inline_query",
-        "chosen_inline_result",
-        "callback_query",
-        "shipping_query",
-        "pre_checkout_query",
-        // 'purchased_paid_media',
-        "poll",
-        "poll_answer",
-        "my_chat_member",
-        "chat_member",
-        "chat_join_request",
-        "chat_boost",
-        "removed_chat_boost",
-      ],
-      onStart: () => {
-        this.logger.info("Bot started");
-      },
-    });
+    if (this.socket) {
+      console.log("Starting bot with socket");
+
+      const runner = createRunner(this.bot, this.socket);
+
+      runner.start();
+
+      return runner.task();
+    } else {
+      return this.bot.start({
+        allowed_updates: [
+          "message",
+          "edited_message",
+          "channel_post",
+          "edited_channel_post",
+          // 'business_connection',
+          // 'business_message',
+          // 'edited_business_message',
+          // 'deleted_business_messages',
+          "message_reaction",
+          "message_reaction_count",
+          "inline_query",
+          "chosen_inline_result",
+          "callback_query",
+          "shipping_query",
+          "pre_checkout_query",
+          // 'purchased_paid_media',
+          "poll",
+          "poll_answer",
+          "my_chat_member",
+          "chat_member",
+          "chat_join_request",
+          "chat_boost",
+          "removed_chat_boost",
+        ],
+        onStart: () => {
+          this.logger.info("Bot started");
+        },
+      });
+    }
   }
 
   private installExitHandlers() {
-    process.once("SIGINT", () => this.bot.stop());
-    process.once("SIGTERM", () => this.bot.stop());
+    // process.once("SIGINT", () => this.bot.stop());
+    // process.once("SIGTERM", () => this.bot.stop());
   }
 
   private installBotHandlers() {
-    this.installTelemetry();
+    if (!this.socket) {
+      this.installTelemetry();
+    }
+
     this.installStartHandler();
     this.installMessageHandler();
     this.installChatMemberHandler();
+
+    this.bot.use((update, next) => {
+      console.log("ANY", update);
+
+      return next();
+    });
   }
 
   private installTelemetry() {
@@ -127,7 +164,11 @@ export class Bot {
   }
 
   private installMessageHandler() {
+    console.log("INSTALL MESSAGE HANDLER");
+
     this.bot.on("message", async (ctx, next) => {
+      console.log("message", ctx.message);
+
       const text = ctx.message.text ?? ctx.message.caption;
 
       if (!text) {
@@ -220,7 +261,11 @@ export class Bot {
   }
 
   private installChatMemberHandler() {
+    console.log("INSTALL CHAT MEMBER HANDLER");
+
     this.bot.on("chat_member", async (ctx, next) => {
+      console.log("chat_member", ctx.chatMember);
+
       const { new_chat_member: newChatMember } = ctx.chatMember;
 
       if (newChatMember.status === "member") {

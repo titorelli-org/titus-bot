@@ -1,4 +1,4 @@
-import { cleanEnv, str, url } from "envalid";
+import { cleanEnv, str, url, bool } from "envalid";
 
 export const env = cleanEnv(process.env, {
   BOT_TOKEN: str(),
@@ -8,4 +8,6 @@ export const env = cleanEnv(process.env, {
   TITORELLI_CLIENT_ID: str(),
   TITORELLI_ACCESS_TOKEN: str(),
   INITIAL_ACCESS_TOKEN: str(),
+  TRANSMITTER_ORIGIN: url(),
+  FEAT_TRANSMITTER: bool({ default: false }),
 });
