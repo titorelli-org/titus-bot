@@ -8,7 +8,7 @@ export const env = cleanEnv(process.env, {
   TITORELLI_CLIENT_ID: str(),
   TITORELLI_ACCESS_TOKEN: str(),
   INITIAL_ACCESS_TOKEN: str(),
-  TRANSMITTER_ORIGIN: url(),
+  TRANSMITTER_ORIGIN: url({ default: "" }),
   TOKEN_ENCRYPTION_SECRET: str({ default: "--not-really-a-secret--" }),
   // Feature flags:
   FEAT_TRANSMITTER: bool({ default: false }),
