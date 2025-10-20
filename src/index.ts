@@ -9,13 +9,13 @@ const bot = new Bot({
   logger: logger.child({ module: "bot" }),
 });
 
-// const liveness = new Liveness(
-//   env.TITORELLI_CLIENT_ID,
-//   20 * 1000 /* 20 seconds */,
-//   env.TITORELLI_HOST,
-//   logger.child({ module: "liveness" }),
-// );
+const liveness = new Liveness(
+  env.TITORELLI_CLIENT_ID,
+  20 * 1000 /* 20 seconds */,
+  env.TITORELLI_HOST,
+  logger.child({ module: "liveness" }),
+);
 
-// liveness.startReporting();
+liveness.startReporting();
 
 bot.launch();
