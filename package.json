@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "main": "dist/bundle.js",
   "scripts": {
-    "dev": "npm run bundle && node -r dotenv/config dist/index.js | pino-pretty",
+    "predev": "npm run bundle",
+    "dev": "node -r dotenv/config dist/index.js | pino-pretty",
     "bundle": "ncc build src/index.ts -C -d -t -o dist",
     "test": "ts-node -r dotenv/config test/index.test.ts"
   },

@@ -5,170 +5,99 @@ import {
   createClient,
   ModelClient,
   serviceDiscovery,
-  clientsStore,
 } from "@titorelli/client";
-import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
+// import { TelemetryClient, grammyMiddleware } from "@titorelli/telemetry-client";
 import { env } from "./env";
-import { OutgoingMessageTemplate } from "./OutgoingMessageTemplate";
 import { type Socket } from "socket.io-client";
-import { createRunner } from "./createRunner";
-import { resolve } from "path";
+import { BotManager } from "./BotManager";
+import { welcomeMessage } from "./messages";
 
-const helloPrivateMessage = new OutgoingMessageTemplate<{
-  siteUrl: string;
-}>(`
-  Добро пожаловать!
-
-  Это бот Титус.
-
-  Он помогает в борьбе против спама в сообествах Telegram.
-
-  Сейчас никаких функций в приватных чатах (таких, как этот) нет, но скоро появятся )
-
-  Если у вас есть группа или канал, можете добавить туда этого бота и назначить его администратором.
-
-  Так же, нужно будет добавить боту права на удаление сообщений.
-
-  Пока на этом все.
-
-  Узнать больше можно тут: {{siteUrl}}
-`);
+type BotConfig = {
+  clientId: string;
+  accessToken: string;
+  botToken: string;
+  socket?: Socket | null;
+  logger: Logger;
+};
 
 export class Bot {
-  private logger: Logger;
-  private bot: GrammyBot;
-  private telemetry: TelemetryClient;
-  private socket: Socket | null;
-  private readonly clientName = `titus-${env.TITORELLI_CLIENT_ID}`;
+  private readonly logger: Logger;
+  // private readonly telemetry: TelemetryClient;
+  private readonly socket: Socket | null;
+  private readonly clientName: string;
+  private readonly manager: BotManager;
 
   constructor({
     clientId,
-    accessToken,
+    accessToken: _accessToken,
     botToken,
     socket,
     logger,
-  }: {
-    clientId: string;
-    accessToken: string;
-    botToken: string;
-    socket?: Socket | null;
-    logger: Logger;
-  }) {
+  }: BotConfig) {
     this.logger = logger;
-    this.bot = new GrammyBot(botToken, {
-      botInfo: {
-        id: 7182412043,
-        is_bot: true,
-        first_name: "titus_bot",
-        username: "titus_antispam_bot",
-        can_join_groups: true,
-        can_read_all_group_messages: true,
-        supports_inline_queries: false,
-        can_connect_to_business: false,
-        has_main_web_app: false,
-      },
-    });
+    this.clientName = `titus-${clientId}`;
     this.socket = socket ?? null;
-    this.telemetry = new TelemetryClient({
-      serviceUrl: env.TELEMETRY_ORIGIN,
-      clientName: this.clientName,
-      initialAccessToken: env.INITIAL_ACCESS_TOKEN,
-      clientStore: clientsStore,
+    // this.telemetry = new TelemetryClient({
+    //   serviceUrl: env.TELEMETRY_ORIGIN,
+    //   clientName: this.clientName,
+    //   initialAccessToken: env.INITIAL_ACCESS_TOKEN,
+    //   clientStore: clientsStore,
+    // });
+    this.manager = new BotManager({
+      botToken,
+      socket,
+      logger,
     });
   }
 
   public async launch() {
-    this.installExitHandlers();
-    this.installBotHandlers();
+    this.manager.on("started", ({ bot }) => {
+      if (!bot) {
+        this.logger.error("Bot manager started but bot is null");
 
-    this.bot.catch((error) => this.logger.error(error));
+        return;
+      }
 
-    if (this.socket) {
-      console.log("Starting bot with socket");
-
-      const runner = createRunner(this.bot, this.socket);
-
-      runner.start();
-
-      return runner.task();
-    } else {
-      return this.bot.start({
-        allowed_updates: [
-          "message",
-          "edited_message",
-          "channel_post",
-          "edited_channel_post",
-          // 'business_connection',
-          // 'business_message',
-          // 'edited_business_message',
-          // 'deleted_business_messages',
-          "message_reaction",
-          "message_reaction_count",
-          "inline_query",
-          "chosen_inline_result",
-          "callback_query",
-          "shipping_query",
-          "pre_checkout_query",
-          // 'purchased_paid_media',
-          "poll",
-          "poll_answer",
-          "my_chat_member",
-          "chat_member",
-          "chat_join_request",
-          "chat_boost",
-          "removed_chat_boost",
-        ],
-        onStart: () => {
-          this.logger.info("Bot started");
-        },
-      });
-    }
-  }
-
-  private installExitHandlers() {
-    // process.once("SIGINT", () => this.bot.stop());
-    // process.once("SIGTERM", () => this.bot.stop());
-  }
-
-  private installBotHandlers() {
-    if (!this.socket) {
-      this.installTelemetry();
-    }
-
-    this.installStartHandler();
-    this.installMessageHandler();
-    this.installChatMemberHandler();
-
-    this.bot.use((update, next) => {
-      console.log("ANY", update);
-
-      return next();
+      this.installExitHandlers(bot);
+      this.installBotHandlers(bot);
     });
+
+    await this.manager.start(this.socket ? "transmitter" : "long-polling");
   }
 
-  private installTelemetry() {
-    this.bot.use(grammyMiddleware(this.telemetry));
+  private installExitHandlers(bot: GrammyBot) {
+    process.once("SIGINT", () => bot.stop());
+    process.once("SIGTERM", () => bot.stop());
   }
 
-  private installStartHandler() {
-    this.bot.command("start", async (ctx, next) => {
+  private installBotHandlers(bot: GrammyBot) {
+    // Disable for now
+    // this.installTelemetry();
+
+    this.installStartHandler(bot);
+    this.installMessageHandler(bot);
+    this.installChatMemberHandler(bot);
+  }
+
+  // private installTelemetry() {
+  //   this.bot.use(grammyMiddleware(this.telemetry));
+  // }
+
+  private installStartHandler(bot: GrammyBot) {
+    bot.command("start", async (ctx, next) => {
       if (ctx.message?.chat.type !== "private") return next();
 
       await ctx.api.sendMessage(
         ctx.chat.id,
-        helloPrivateMessage.render({
+        welcomeMessage.render({
           siteUrl: "https://next.titorelli.ru",
         }),
       );
     });
   }
 
-  private installMessageHandler() {
-    console.log("INSTALL MESSAGE HANDLER");
-
-    this.bot.on("message", async (ctx, next) => {
-      console.log("message", ctx.message);
-
+  private installMessageHandler(bot: GrammyBot) {
+    bot.on("message", async (ctx, next) => {
       const text = ctx.message.text ?? ctx.message.caption;
 
       if (!text) {
@@ -256,16 +185,10 @@ export class Bot {
 
       return next();
     });
-
-    this.bot.on("message", async (ctx, next) => {});
   }
 
-  private installChatMemberHandler() {
-    console.log("INSTALL CHAT MEMBER HANDLER");
-
-    this.bot.on("chat_member", async (ctx, next) => {
-      console.log("chat_member", ctx.chatMember);
-
+  private installChatMemberHandler(bot: GrammyBot) {
+    bot.on("chat_member", async (ctx, next) => {
       const { new_chat_member: newChatMember } = ctx.chatMember;
 
       if (newChatMember.status === "member") {
