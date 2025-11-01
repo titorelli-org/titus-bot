@@ -107,6 +107,10 @@ export class BotManager extends EventEmitter<BotManagerEventsMap> {
     this.logger.info("Bot stopped");
   }
 
+  public getRunType() {
+    return this.runType ?? null;
+  }
+
   private async launchLongPolling() {
     if (this.isRunning) {
       return null;

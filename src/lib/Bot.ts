@@ -77,6 +77,7 @@ export class Bot {
     this.installStartHandler(bot);
     this.installMessageHandler(bot);
     this.installChatMemberHandler(bot);
+    this.installUpdateProcessedHandler(bot);
   }
 
   // private installTelemetry() {
@@ -203,6 +204,20 @@ export class Bot {
 
           this.logger.info("User failed CAS check on entrerance, banned");
         }
+      }
+
+      return next();
+    });
+  }
+
+  private installUpdateProcessedHandler(bot: GrammyBot) {
+    if (this.manager.getRunType() === "transmitter") {
+      return;
+    }
+
+    bot.use(async (ctx, next) => {
+      if (ctx.update.update_id) {
+        this.socket?.emit("update-processed", ctx.update.update_id);
       }
 
       return next();
