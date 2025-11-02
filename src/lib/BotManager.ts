@@ -1,12 +1,16 @@
 import type { Socket } from "socket.io-client";
 import type { Logger } from "pino";
+import type { Update } from "@grammyjs/types";
 import { Bot as GrammyBot } from "grammy";
 import EventEmitter from "events";
+import { Timeout } from "./Timeout";
+import { UpdateFilter } from "./UpdateFilter";
 
 export type BotRunType = "long-polling" | "transmitter";
 
 export type BotManagerConfig = {
   botToken: string;
+  updateFilter: UpdateFilter;
   socket?: Socket | null;
   logger: Logger;
 };
@@ -21,6 +25,7 @@ export class BotManager extends EventEmitter<BotManagerEventsMap> {
   private bot: GrammyBot | null = null;
   private botReady: Promise<void> | null = null;
   private readonly botToken: string;
+  private readonly updateFilter: UpdateFilter;
   private readonly logger: Logger;
   private readonly allowedUpdates = [
     "message",
@@ -48,11 +53,12 @@ export class BotManager extends EventEmitter<BotManagerEventsMap> {
     "removed_chat_boost",
   ];
 
-  constructor({ botToken, socket, logger }: BotManagerConfig) {
+  constructor({ botToken, socket, updateFilter, logger }: BotManagerConfig) {
     super();
 
     this.socket = socket ?? null;
     this.botToken = botToken;
+    this.updateFilter = updateFilter;
     this.logger = logger;
   }
 
@@ -107,8 +113,8 @@ export class BotManager extends EventEmitter<BotManagerEventsMap> {
     this.logger.info("Bot stopped");
   }
 
-  public getRunType() {
-    return this.runType ?? null;
+  public isRunType(runType: BotRunType) {
+    return this.runType === runType;
   }
 
   private async launchLongPolling() {
@@ -125,27 +131,20 @@ export class BotManager extends EventEmitter<BotManagerEventsMap> {
         this.bot = await this.createBot();
 
         await new Promise<void>((resolve, reject) => {
-          const abortController = new AbortController();
-
-          const abortTimeout = setTimeout(() => {
-            abortController.abort();
-          }, 12_000);
-
-          const abortListener = () => {
-            reject(new Error("Bot start timeout"));
-          };
-
-          abortController.signal.addEventListener("abort", abortListener);
+          const timeout = new Timeout(() =>
+            reject(new Error("Bot start timeout")),
+          ).start(12_000);
 
           this.bot!.start({
             allowed_updates: this.allowedUpdates as any,
             onStart: () => {
-              clearTimeout(abortTimeout);
+              const aborted = timeout.stopped;
 
-              abortController.signal.removeEventListener(
-                "abort",
-                abortListener,
-              );
+              if (aborted) {
+                return;
+              }
+
+              timeout.stop();
 
               this.logger.info("Bot started in long-polling mode");
 
@@ -183,7 +182,15 @@ export class BotManager extends EventEmitter<BotManagerEventsMap> {
 
         this.bot = await this.createBot();
 
-        const updateListener = (update: any) => this.bot!.handleUpdate(update);
+        const updateListener = (incomingUpdate: Update) => {
+          const wasProcessed = this.updateFilter.has(incomingUpdate);
+
+          if (wasProcessed) {
+            return;
+          }
+
+          this.bot!.handleUpdate(incomingUpdate);
+        };
 
         const reconnectListener = () => {
           this.restart("transmitter");

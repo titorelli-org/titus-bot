@@ -11,6 +11,7 @@ import { env } from "./env";
 import { type Socket } from "socket.io-client";
 import { BotManager } from "./BotManager";
 import { welcomeMessage } from "./messages";
+import { UpdateFilter } from "./UpdateFilter";
 
 type BotConfig = {
   clientId: string;
@@ -24,8 +25,10 @@ export class Bot {
   private readonly logger: Logger;
   // private readonly telemetry: TelemetryClient;
   private readonly socket: Socket | null;
+  private readonly clientId: string;
   private readonly clientName: string;
   private readonly manager: BotManager;
+  private readonly updateFilter = new UpdateFilter();
 
   constructor({
     clientId,
@@ -35,7 +38,8 @@ export class Bot {
     logger,
   }: BotConfig) {
     this.logger = logger;
-    this.clientName = `titus-${clientId}`;
+    this.clientId = clientId;
+    this.clientName = `titus-${this.clientId}`;
     this.socket = socket ?? null;
     // this.telemetry = new TelemetryClient({
     //   serviceUrl: env.TELEMETRY_ORIGIN,
@@ -46,6 +50,7 @@ export class Bot {
     this.manager = new BotManager({
       botToken,
       socket,
+      updateFilter: this.updateFilter,
       logger,
     });
   }
@@ -211,17 +216,20 @@ export class Bot {
   }
 
   private installUpdateProcessedHandler(bot: GrammyBot) {
-    if (this.manager.getRunType() === "transmitter") {
-      return;
+    if (this.manager.isRunType("transmitter")) {
+      bot.use(async ({ update }, next) => {
+        if (update.update_id) {
+          this.updateFilter.add(update.update_id);
+
+          this.socket?.emit(
+            `update-processed:${this.clientId}`,
+            update.update_id,
+          );
+        }
+
+        return next();
+      });
     }
-
-    bot.use(async (ctx, next) => {
-      if (ctx.update.update_id) {
-        this.socket?.emit("update-processed", ctx.update.update_id);
-      }
-
-      return next();
-    });
   }
 
   private async tryDeleteMessage(ctx: Context) {
