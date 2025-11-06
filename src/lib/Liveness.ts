@@ -1,43 +1,62 @@
-import { Logger } from "pino";
+import type { Logger } from "pino";
 import { makePoller, type Poller } from "reactive-poller";
+import type { StartStoppable } from "./types";
 
-export class Liveness {
-  private backoffTimeout = 60 * 1000; /* 1 min */
-  private poller: Poller<void>;
+export type LivenessConfig = {
+  clientId: string;
+  intervalMs: number;
+  titorelliServiceUrl: string;
+  logger: Logger;
+};
 
-  constructor(
-    private clientId: string,
-    private intervalMs: number,
-    private titorelliServiceUrl: string,
-    private logger: Logger,
-  ) {
+export class Liveness implements StartStoppable {
+  private readonly titorelliServiceUrl: string;
+  private readonly backoffTimeout = 60 * 1000; /* 1 min */
+  private readonly poller: Poller<void>;
+  private readonly clientId: string;
+  private readonly logger: Logger;
+
+  constructor({
+    clientId,
+    intervalMs,
+    titorelliServiceUrl,
+    logger,
+  }: LivenessConfig) {
+    this.titorelliServiceUrl = titorelliServiceUrl;
+    this.clientId = clientId;
+    this.logger = logger;
     this.poller = makePoller({
       dataProvider: this.report,
-      interval: this.intervalMs,
+      interval: intervalMs,
       retryInterval: this.backoffTimeout,
       errorHandler: (e) => logger.error(e),
     });
   }
 
-  public startReporting = async () => {
+  public start = async () => {
     await this.poller.start();
   };
 
-  public stopReporting = async () => {
+  public stop = async () => {
     await this.poller.stop();
   };
 
   private report = async () => {
-    const resp = await fetch(
-      `${this.titorelliServiceUrl}/bots/liveness?clientId=${this.clientId}`,
-      { method: "POST" },
-    );
+    try {
+      const url = new URL("/bots/liveness", this.titorelliServiceUrl);
 
-    if (!resp.ok) {
-      this.logger.error(
-        'Liveness endpoint for bot with client id = "%s" not responding',
-        this.clientId,
-      );
+      url.searchParams.set("clientId", this.clientId);
+
+      const resp = await fetch(url, { method: "POST" });
+
+      if (!resp.ok) {
+        this.logger.error(
+          { clientId: this.clientId },
+          "Liveness endpoint not responding",
+        );
+      }
+    } catch (e) {
+      this.logger.error(e, "Error when reporting liveness");
     }
   };
 }

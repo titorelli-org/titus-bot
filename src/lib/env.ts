@@ -1,6 +1,10 @@
 import { cleanEnv, str, url, bool } from "envalid";
 
 export const env = cleanEnv(process.env, {
+  NODE_ENV: str({
+    choices: ["development", "production"],
+    default: "development",
+  }),
   BOT_TOKEN: str(),
   TITORELLI_HOST: url(),
   CAS_ORIGIN: url(),

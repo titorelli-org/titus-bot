@@ -12,6 +12,7 @@ import { type Socket } from "socket.io-client";
 import { BotManager } from "./BotManager";
 import { welcomeMessage } from "./messages";
 import { UpdateFilter } from "./UpdateFilter";
+import type { StartStoppable } from "./types";
 
 type BotConfig = {
   clientId: string;
@@ -21,7 +22,7 @@ type BotConfig = {
   logger: Logger;
 };
 
-export class Bot {
+export class Bot implements StartStoppable {
   private readonly logger: Logger;
   // private readonly telemetry: TelemetryClient;
   private readonly socket: Socket | null;
@@ -55,7 +56,7 @@ export class Bot {
     });
   }
 
-  public async launch() {
+  public async start() {
     this.manager.on("started", ({ bot }) => {
       if (!bot) {
         this.logger.error("Bot manager started but bot is null");
@@ -68,6 +69,10 @@ export class Bot {
     });
 
     await this.manager.start(this.socket ? "transmitter" : "long-polling");
+  }
+
+  public async stop() {
+    await this.manager.stop();
   }
 
   private installExitHandlers(bot: GrammyBot) {
