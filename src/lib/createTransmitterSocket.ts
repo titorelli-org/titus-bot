@@ -1,10 +1,18 @@
 import { logger } from "@titorelli/client";
 import { io } from "socket.io-client";
 import { env } from "./env";
-import { BotTokenEncryptor } from "./BotTokenEncryptor";
+import { simpleEncrypt } from "@titorelli-org/shared-simple-crypto";
 
 export const createTransmitterSocket = () => {
   if (!env.FEAT_TRANSMITTER) {
+    return null;
+  }
+
+  if (!env.TRANSMITTER_ORIGIN) {
+    logger.warn(
+      "FEAT_TRANSMITTER is enabled but TRANSMITTER_ORIGIN is not set, skipping transmitter socket creation",
+    );
+
     return null;
   }
 
@@ -12,10 +20,7 @@ export const createTransmitterSocket = () => {
     auth: {
       botId: env.TITORELLI_CLIENT_ID,
       accessToken: env.TITORELLI_ACCESS_TOKEN,
-      botTokenEncrypted: new BotTokenEncryptor(
-        env.TOKEN_ENCRYPTION_SECRET,
-        logger,
-      ).encryptBotToken(env.TITORELLI_CLIENT_ID, env.BOT_TOKEN),
+      botTokenEncrypted: simpleEncrypt<string>(env.BOT_TOKEN),
     },
   });
 

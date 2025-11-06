@@ -64,7 +64,6 @@ export class Bot implements StartStoppable {
         return;
       }
 
-      this.installExitHandlers(bot);
       this.installBotHandlers(bot);
     });
 
@@ -73,11 +72,6 @@ export class Bot implements StartStoppable {
 
   public async stop() {
     await this.manager.stop();
-  }
-
-  private installExitHandlers(bot: GrammyBot) {
-    process.once("SIGINT", () => bot.stop());
-    process.once("SIGTERM", () => bot.stop());
   }
 
   private installBotHandlers(bot: GrammyBot) {
