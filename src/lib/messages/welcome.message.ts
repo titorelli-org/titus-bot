@@ -1,21 +1,3 @@
-import { OutgoingMessageTemplate } from "../OutgoingMessageTemplate";
+import { OutgoingMessageTemplate } from "./OutgoingMessageTemplate";
 
-export const welcomeMessage = new OutgoingMessageTemplate<{
-  siteUrl: string;
-}>(`
-  Добро пожаловать!
-
-  Это бот Титус.
-
-  Он помогает в борьбе против спама в сообествах Telegram.
-
-  Сейчас никаких функций в приватных чатах (таких, как этот) нет, но скоро появятся )
-
-  Если у вас есть группа или канал, можете добавить туда этого бота и назначить его администратором.
-
-  Еще нужно будет добавить боту права на удаление сообщений.
-
-  Пока на этом все.
-
-  Узнать больше можно тут: {{siteUrl}}
-`);
+export class WelcomeMessage extends OutgoingMessageTemplate.fromFile("welcome.html") {}

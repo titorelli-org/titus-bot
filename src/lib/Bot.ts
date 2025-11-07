@@ -10,7 +10,7 @@ import {
 import { env } from "./env";
 import { type Socket } from "socket.io-client";
 import { BotManager } from "./BotManager";
-import { welcomeMessage } from "./messages";
+import { WelcomeMessage } from "./messages";
 import { UpdateFilter } from "./UpdateFilter";
 import type { StartStoppable } from "./types";
 
@@ -92,12 +92,9 @@ export class Bot implements StartStoppable {
     bot.command("start", async (ctx, next) => {
       if (ctx.message?.chat.type !== "private") return next();
 
-      await ctx.api.sendMessage(
-        ctx.chat.id,
-        welcomeMessage.render({
-          siteUrl: "https://next.titorelli.ru",
-        }),
-      );
+      const welcomeMessage = new WelcomeMessage();
+
+      await ctx.api.sendMessage(ctx.chat.id, welcomeMessage.render());
     });
   }
 
