@@ -6,24 +6,6 @@
 
 ARG NODE_VERSION=22.19.0
 
-FROM node:${NODE_VERSION}-alpine AS packer
-
-# Use production node environment by default.
-ENV NODE_ENV=production
-
-WORKDIR /usr/src/titus-bot
-
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.npm to speed up subsequent builds.
-# Leverage a bind mounts to package.json and package-lock.json to avoid having to copy them into
-# into this layer.
-
-
-# Copy the rest of the source files into the image.
-COPY . .
-
-RUN npm install --include dev
-
 FROM node:${NODE_VERSION}-alpine
 
 ENV NODE_ENV=production
