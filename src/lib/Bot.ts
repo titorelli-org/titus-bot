@@ -10,10 +10,9 @@ import {
 import { env } from "./env";
 import { type Socket } from "socket.io-client";
 import { BotManager } from "./BotManager";
-import { WelcomeMessage } from "./messages";
+import { WelcomeMessage, BotSetupInstruction } from "./messages";
 import { UpdateFilter } from "./UpdateFilter";
 import type { StartStoppable } from "./types";
-import { BotSetupInstruction } from "./messages/BotSetupInstruction.message";
 
 type BotConfig = {
   clientId: string;
