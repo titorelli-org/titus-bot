@@ -10,12 +10,12 @@ FROM node:${NODE_VERSION}-alpine
 
 ENV NODE_ENV=production
 
-WORKDIR /usr/run/titus-bot
-
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 USER nextjs
+
+WORKDIR /usr/run/titus-bot
 
 COPY --chown=nextjs:nodejs . .
 
