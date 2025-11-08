@@ -4,8 +4,8 @@
   "main": "dist/bundle.js",
   "scripts": {
     "predev": "npm run bundle",
-    "dev": "node -r dotenv/config dist/index.js | pino-pretty",
-    "bundle": "ncc build src/index.ts -C -d -t -o dist",
+    "dev": "bash ./run-dev.sh",
+    "bundle": "bash ./bundle.sh",
     "test": "ts-node -r dotenv/config test/index.test.ts"
   },
   "keywords": [],

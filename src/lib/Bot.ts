@@ -13,6 +13,7 @@ import { BotManager } from "./BotManager";
 import { WelcomeMessage } from "./messages";
 import { UpdateFilter } from "./UpdateFilter";
 import type { StartStoppable } from "./types";
+import { BotSetupInstruction } from "./messages/BotSetupInstruction.message";
 
 type BotConfig = {
   clientId: string;
@@ -29,6 +30,7 @@ export class Bot implements StartStoppable {
   private readonly clientId: string;
   private readonly clientName: string;
   private readonly manager: BotManager;
+  private readonly dryRun = env.DRY_RUN;
   private readonly updateFilter = new UpdateFilter();
 
   constructor({
@@ -90,11 +92,19 @@ export class Bot implements StartStoppable {
 
   private installStartHandler(bot: GrammyBot) {
     bot.command("start", async (ctx, next) => {
-      if (ctx.message?.chat.type !== "private") return next();
+      try {
+        if (ctx.message?.chat.type !== "private") return;
 
-      const welcomeMessage = new WelcomeMessage();
+        const welcomeMessage = new WelcomeMessage();
+        const instructionMessage = new BotSetupInstruction();
 
-      await ctx.api.sendMessage(ctx.chat.id, welcomeMessage.render());
+        await ctx.api.sendMessage(ctx.chat.id, welcomeMessage.render());
+        await ctx.api.sendMediaGroup(ctx.chat.id, instructionMessage.media);
+      } catch (error) {
+        this.logger.error(error, "Error when sending welcome message");
+      } finally {
+        return next();
+      }
     });
   }
 
@@ -230,6 +240,12 @@ export class Bot implements StartStoppable {
 
   private async tryDeleteMessage(ctx: Context) {
     try {
+      if (this.dryRun) {
+        this.logger.info("Dry run: deleting message");
+
+        return;
+      }
+
       await ctx.deleteMessage();
     } catch (e) {
       this.logger.error(e, "Error when deleting message");
@@ -238,6 +254,12 @@ export class Bot implements StartStoppable {
 
   private async tryBanChatMember(ctx: Context) {
     try {
+      if (this.dryRun) {
+        this.logger.info("Dry run: banning chat member");
+
+        return;
+      }
+
       await ctx.banAuthor();
     } catch (e) {
       this.logger.error(e, "Error when ban chat member");

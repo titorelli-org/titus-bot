@@ -5,6 +5,7 @@ export const env = cleanEnv(process.env, {
     choices: ["development", "production"],
     default: "development",
   }),
+  DRY_RUN: bool({ default: false }),
   BOT_TOKEN: str(),
   TITORELLI_HOST: url(),
   CAS_ORIGIN: url(),

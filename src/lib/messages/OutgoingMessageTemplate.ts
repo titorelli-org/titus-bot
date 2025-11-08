@@ -24,7 +24,7 @@ export class OutgoingMessageTemplate<
     const fullPath = path.join(__dirname, "templates", filename);
     const html = readFileSync(fullPath, "utf8");
 
-    return class extends OutgoingMessageTemplate<Params> {
+    return class BoundOutgoingMessageTemplate extends OutgoingMessageTemplate<Params> {
       constructor() {
         super({ template: html });
       }
@@ -37,7 +37,7 @@ export class OutgoingMessageTemplate<
     const fullPath = path.join(__dirname, "templates", filename);
     const markdown = readFileSync(fullPath, "utf8");
 
-    return class extends OutgoingMessageTemplate<Params> {
+    return class BoundOutgoingMessageTemplate extends OutgoingMessageTemplate<Params> {
       constructor() {
         super({ template: markdown });
       }
@@ -48,7 +48,7 @@ export class OutgoingMessageTemplate<
     this.template = template;
   }
 
-  public render(params: Params) {
-    return this.template;
+  public render(_params?: Params) {
+    return this.template!;
   }
 }
