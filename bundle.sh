@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 npx ncc build src/index.ts -C -t -o dist
 
