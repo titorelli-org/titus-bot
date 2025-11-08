@@ -17,13 +17,9 @@ RUN adduser --system --uid 1001 nextjs
 
 USER nextjs
 
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm
+COPY --chown=nextjs:nodejs . .
 
 RUN npm install --include dev
-
-COPY --chown=nextjs:nodejs . .
 
 # Run the application.
 CMD [ "npm", "start" ]
