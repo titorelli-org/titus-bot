@@ -17,6 +17,6 @@ export class OutgoingMediaGroup {
   }
 
   protected getUploadsFullPath(filename: string) {
-    return path.join(process.cwd(), "static", filename);
+    return path.join(process.cwd(), "src/static", filename);
   }
 }
